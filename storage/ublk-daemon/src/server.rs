@@ -914,7 +914,12 @@ async fn create_overlaybd_device(
         return Err(err);
     }
 
-    if let Err(err) = wait_for_ublk_dev(dev_id).context("wait for ublk device") {
+    if let Err(err) = tokio::task::spawn_blocking(move || wait_for_ublk_dev(dev_id))
+        .await
+        .context("wait_for_ublk_dev task join failed")
+        .and_then(|res| res)
+        .context("wait for ublk device")
+    {
         cleanup_failed_ublk_start(ctrl_ring.clone(), dev).await;
         return Err(err);
     }
@@ -2004,7 +2009,13 @@ async fn create_new_device(
         cleanup_failed_ublk_start(ctrl_ring.clone(), dev).await;
         return Err(err);
     }
-    if let Err(err) = wait_for_ublk_dev(dev_id).context("wait for ublk device") {
+
+    if let Err(err) = tokio::task::spawn_blocking(move || wait_for_ublk_dev(dev_id))
+        .await
+        .context("wait_for_ublk_dev task join failed")
+        .and_then(|res| res)
+        .context("wait for ublk device")
+    {
         cleanup_failed_ublk_start(ctrl_ring.clone(), dev).await;
         return Err(err);
     }
